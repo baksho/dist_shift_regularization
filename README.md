@@ -1,6 +1,6 @@
 The topic of the project is **Covariate Shift Regularization with Kernels**.
 
-# Project Outline
+## Project Outline
 The main goal of this project is to understand the impact of covariate shift on learning algorithms and performance.
 
 - Rephrase the covriate shift setting in the framework of kernel methods, see e.g. Mohri (2018), Bach (2024). What is covariate shift and which strategies are used to tackle this?
