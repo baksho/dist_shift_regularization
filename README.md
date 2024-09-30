@@ -10,4 +10,8 @@ The main goal of this project is to understand the impact of covariate shift on 
 - If time allows: Can we do a low-rank approximation of the kernel matrix and maintain efficiency?
 
 #### References
-aaa
+- Francis Bach. *Learning theory from rst principles.* MIT press, 2024.
+- Davit Gogolashvili, Matteo Zecchin, Motonobu Kanagawa, Marios Kountouris, and Maurizio Filippone. When is importance weighting correction needed for covariate shift adaptation? _arXiv preprint arXiv:2303.04020, 2023_.
+Cong Ma, Reese Pathak, and Martin J Wainwright. Optimally tackling covariate shift in rkhs-based
+nonparametric regression. arXiv preprint arXiv:2205.02986, 2022.
+Mehryar Mohri. Foundations of machine learning, 2018.
