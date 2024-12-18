@@ -1,0 +1,9 @@
+\chapter{Overview: Covariate Shift}\label{chp:2}
+
+Covariate shift occurs when the marginal distribution of the input variables $\mathbb{P}_{\text{train}} (\mathcal{X})$ differs between the training and testing phases, while the conditional distribution of the output given the input $\mathbb{P}(\mathcal{Y}|\mathcal{X})$ remains unchanged.
+
+\noindent Mathematically, this is expressed as:
+$$\mathbb{P}_{\text{train}} (\mathcal{X}) \neq \mathbb{P}_{\text{test}} (\mathcal{X})$$
+$$\mathbb{P}_{\text{train}}(\mathcal{Y}|\mathcal{X}) = \mathbb{P}_{\text{test}}(\mathcal{Y}|\mathcal{X})$$
+
+\noindent The goal is to learn a function $f$ during training, based on data ${(X_i, Y_i)}_{i=1}^{n} \sim \mathbb{P}_{\text{train}}(\mathcal{X}, \mathcal{Y})$, that  generalizes well on the test distribution $\mathbb{P}_{\text{test}}(\mathcal{X}, \mathcal{Y})$. The change is to adjust for the mismatch between $\mathbb{P}_{\text{train}} (\mathcal{X})$ and $\mathbb{P}_{\text{test}} (\mathcal{X})$, which can degrade model performance.

@@ -1,0 +1,96 @@
+% Main file: main.tex
+% Compile this file to build the full document
+
+\documentclass[a4paper,12pt]{report} % Use book class for structured documents
+\usepackage[utf8]{inputenc}        % Support for UTF-8 characters
+\usepackage{amsmath, amssymb}      % Mathematical symbols and equations
+\usepackage{graphicx}              % For including images
+\usepackage[font=scriptsize]{caption}
+\usepackage{hyperref}              % For hyperlinks
+% \usepackage[super]{natbib}         % Bibliography support
+\usepackage{geometry}              % Page layout customization
+\usepackage{titlesec}              % For customizing section titles
+\usepackage{fancyhdr}
+\usepackage[table]{xcolor}
+\usepackage{tabularx}
+% \usepackage{cite}
+\usepackage{xcolor}
+% Define a custom highlight command
+\newcommand{\highlight}[1]{\colorbox{yellow}{#1}}
+\usepackage{soul}
+
+\makeatletter
+\renewcommand\@biblabel[1]{[#1]} % Adds brackets in the bibliography
+\renewcommand\@cite[2]{\textsuperscript{[#1]}} % Adds brackets in the superscript citation
+\makeatother
+
+% Page layout settings
+\geometry{margin=1in}
+
+% Customizing Chapter Heading Style
+\titleformat{\chapter}[block] % 'block' means the title will be on its own line
+  {\normalfont\Huge\bfseries} % Font settings for the chapter title
+  {\thechapter}               % Numbering format (e.g., "1")
+  {1em}                       % Space between the number and title
+  {}                          % No prefix for the chapter title
+
+
+\begin{document}
+
+\pagestyle{fancy}
+\fancyhead{} % clear all header fields
+\fancyhead[LO,RE]{\small\nouppercase{\rightmark}}
+\fancyfoot{} % clear all footer fields
+\fancyhead[LE,RO]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% Title Page
+\title{\textbf{Covariate Shift Regularization with Kernels}}
+\author{Suvinava Basak}
+\date{\today}
+\maketitle
+
+% Blank Page before Summary
+\cleardoublepage
+% \thispagestyle{empty} % Removes page number
+% This is a blank page
+
+% Customizing Summary Heading Size
+\titleformat{\section}[block]
+{\normalfont\Huge\bfseries}{}{0pt}{}
+
+% Summary Page
+\newpage
+\vspace*{5cm} % Push the content to the middle of the page
+\section*{\highlight{Abstract}}
+% \addcontentsline{toc}{section}{Summary} % Add to Table of Contents
+Lorem Ipsum
+
+\setlength{\parskip}{1em} % Adds vertical space between paragraphs
+\setlength{\parindent}{15pt} % Removes paragraph indentation
+Lorem Ipsum
+
+% Reverting Section Heading Size
+\titleformat{\section}[block]
+{\normalfont\large\bfseries}{\thesection}{1em}{}
+
+\titleformat{\subsection}[block]{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+
+% Table of Contents
+\newpage
+\tableofcontents
+\newpage
+
+% Include chapters
+
+\include{chapters/chapter1} % Introduction
+\include{chapters/chapter2}
+\include{chapters/chapter3}
+
+
+% Bibliography Section
+\bibliographystyle{ieeetr} % Style for bibliography
+% \bibliographystyle{unsrt} % Style for bibliography
+\bibliography{bibliography} % References in bibliography.bib
+
+\end{document}
