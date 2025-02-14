@@ -4,7 +4,7 @@ The topic of the project is **Covariate Shift Regularization with Kernels**.
 Covariate shift, a fundamental challenge in supervised learning, occurs when the distribution of input features differs between training and test datasets while the conditional distribution of the target given the input remains unchanged. This project explores the challenge of covariate shift through the lens of kernel methods, particularly in the linear regression settings. We analyze theoretical foundations, propose strategies for mitigating covariate shift using importance weighting with weights estimated by kernel density estimation and self-attention mechanisms. We conduct experiments using synthetic data to assess the effect of mean shift on model performance, comparing ordinary least squares and gradient descent estimators. We also explore the roles of different parameters like sample size, learning rate, masking fucntion etc. in mitigating the challenge posed by covariate shift.
 
 
-## Project Outline
+### Project Outline
 The main goal of this project is to understand the impact of covariate shift on learning algorithms and performance.
 
 - We formally introduce the challenge of covriate shift in the framework of kernel methods.
@@ -14,7 +14,7 @@ The main goal of this project is to understand the impact of covariate shift on 
 - We compare the method with its corresponding variants of no importance weighting.
 - We also compare the algorithms with respect to complexity: choice of learning rate, sample sizes, masking function used in self-attention mechanism etc.
 
-#### References
+### References
 Below reference were extensive used during this project:
 - Francis Bach. *Learning theory from first principles.* MIT press, 2024.
 - Davit Gogolashvili, Matteo Zecchin, Motonobu Kanagawa, Marios Kountouris, and Maurizio Filippone. *When is importance weighting correction needed for covariate shift adaptation?* arXiv preprint arXiv:2303.04020, 2023.
