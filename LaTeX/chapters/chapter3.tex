@@ -1,82 +1,346 @@
-\chapter{Overview: Kernel Methods}\label{chp:3}
+\chapter{Strategies for Covariate Shift}\label{chp:3}
 
-Kernel methods operate by embedding input data $X \in \mathcal{X}$ into a high-dimensional feature space $\mathcal{H}$ through a mapping function $\phi: \mathcal{X} \rightarrow \mathcal{H}$. Instead of explicitly computing the mapping $\phi(X)$, kernel methods compute inner products in the feature space using a \textbf{kernel function} $k: \mathcal{X} \times \mathcal{X} \rightarrow \mathbb{R}$, where:
-$$k(X, X') = \langle \phi(X), \phi(X') \rangle_{\mathcal{H}}$$
+There are several techniques to handle covariate shift by adjusting the distribution mismatch between train and test datasets. In this section, we will discuss some of the most prominent methods to handle covariate shift.
 
-Common kernel functions include:
+\section{Importance Weighting}\label{imp-weight}
+
+One of the most popular approaches for handling covariate shift is to introduce \textcolor{blue}{\emph{importance weights}} that adjusts the empirical risk to better reflect the test distribution \citep{shimodaira2000improving}.\\
+
+If $p_{\text{train}}(X)$ and $p_{\text{test}}(X)$ are the probability density functions corresponding to the input distribution $\mathbb{P}_{\text{train}}(X)$ (also called \emph{source distribution}) and $\mathbb{P}_{\text{test}}(X)$ (also called \emph{target distribution}) respectively, then the importance weights for individual samples $x_i$ are given by:
+
+\begin{equation}
+    \omega(x_i) = \frac{p_{\text{test}}(x_i)}{p_{\text{train}}(x_i)} = \frac{d\mathbb{P}_{\text{test}}(x_i)}{d\mathbb{P}_{\text{train}}(x_i)}
+    \label{eqn:3.1}
+\end{equation}
+
+where $w: X \to \mathbb{R}_+$ is the \emph{Radon-Nikodym derivative} of the target measure with respect to the source measure.\\
+
+The standard \emph{empirical risk} with a loss function $\ell: \mathbb{R} \times \mathbb{R} \to \mathbb{R}$ to learn the parameter $\theta$ \citep{vapnik1998statistical, scholkopf2002learning}, as stated below:
+
+\begin{equation}
+    \hat{\mathcal{R}}(\theta) = \frac{1}{n}\sum_{i=1}^{n}\ell(y_i, \hat{f}(x_i; \theta))
+    \label{eqn:3.2}
+\end{equation}
+
+now becomes \emph{importance weighted empirical risk} as below:
+
+\begin{equation}
+    \hat{\mathcal{R}}_{w}(\theta) = \frac{1}{n}\sum_{i=1}^{n} \omega(x_i) \ell(y_i, \hat{f}(x_i; \theta))
+    \label{eqn:3.3}
+\end{equation}
+
+This ensures that the training data is effectively "corrected" to resemble the test distribution. We have to note that in practical situations, we do not know the underlying probability distributions of both train and test data, so the individual importance weights are not available to us. Therefore, we need a strategy to estimate the probability density functions from the data to learn the weights. 
+
+\subsection{Kernel Density Estimation}
+
+Given a dataset $X = \{ x_1, x_2, \ldots, x_n \}$, the estimated probability density function $\hat{p}(x)$ at any point $x$ is computed as:
+
+\begin{equation}
+    \hat{p}(x) = \frac{1}{nh} \sum_{i=1}^n K \left( \frac{x - x_i}{h} \right) 
+    \label{eqn:3.4}
+\end{equation}
+
+where, $n$ is the number of data points, $h$ is the bandwidth parameter to control the smoothness of the density estimate, $K(\cdot)$ is the kernel function and $x_i$ are the observed data points. For example, if we are using \emph{Gaussian Kernel}:
+
+\begin{equation}
+    K(u) = \frac{1}{\sqrt{2\pi}} e^{-\frac{1}{2}u^2} 
+    \label{eqn:3.5}
+\end{equation}
+
+Thus the estimated density simplifies to:
+
+\begin{equation}
+    \hat{p}(x) = \frac{1}{nh\sqrt{2\pi}} \sum_{i=1}^n e^{-\frac{(x - x_i)^2}{2h^2}} 
+    \label{eqn:3.6}
+\end{equation}
+
+We also note that bandwidth ($h$) controls the smoothness of the kernel density estimate. A smaller bandwidth produces a more detailed (possibly noisy) density estimate while a larger bandwidth produces a smoother density estimate, which might oversmooth the data and lose details.\\
+
+Once we learn the density function $p_{\text{source}}(x)$ and $p_{\text{target}}(x)$, we take the log-likelihood of the training data points under both $p_{\text{source}}(x)$ and $p_{\text{target}}(x)$.\\
+
+The rationale behind taking the log-likelihood is that KDE estimates the probability density function $p(x)$, which is typically a very small number, especially in high-dimensional spaces. Since probabilities are bounded between 0 and 1, direct computation of density ratios according to \ref{eqn:3.1} can involve extremely small values, leading to numerical underflow (loss of precision in floating-point calculations) in most programming languages like Python. Instead, we compute $\log p(x)$ which avoids dealing with very small numbers and keeps computations stable. So now, instead of \ref{eqn:3.1} the importance weight ratios become:
+
+\begin{equation}
+    \log \omega(x) = \log p_{\text{test}}(x) - \log p_{\text{train}}(x) 
+    \label{eqn:3.7}
+\end{equation}
+
+Let $M_{\omega}: \mathbb{R}^n \to \mathbb{R}^n$ be the diagonal matrix of importance weights diagonal entries $(\omega(x_1), \ldots, \omega(x_n))$ for $n$ data points in the sample, i.e.,
+
+\begin{equation}
+    M_{\omega} = \begin{bmatrix}
+    \omega(x_1) & 0 & \cdots & 0 \\
+    0 & \omega(x_2) & \cdots & 0 \\
+    \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \cdots & \omega(x_n)
+    \end{bmatrix}
+    \label{eqn:3.8}
+\end{equation}
+
+\vspace{1em}
+\textbf{Ordinary Least Squares (OLS)}\\
+
+As explained in section \ref{imp-weight} equation \ref{eqn:3.3}, the \emph{importance weighted ordinary least square estimator} can be obtained by minimizing the empirical risk on training data with the additional effect of the importance weights:
+
+\begin{equation}
+    \hat{\theta}_{\text{IWOLS}} = \argmin_{\theta \in \mathbb{R}^d} \left[ \frac{1}{n}\sum_{i=1}^{n} \omega(x_i) \left( \langle \hat{\theta}, x_i \rangle - y_i \right)^2 \right]
+    \label{eqn:3.9}
+\end{equation}
+
+The closed-form solution of the above minimization problem \citep{aitken1936least, rao1945information} is given by
+
+\begin{equation}
+    \hat{\theta}_{\text{IWOLS}} = (\mathbf{X}^\top M_{\omega} \mathbf{X})^{-1}\mathbf{X}^\top M_{\omega} \mathbf{Y}
+    \label{eqn:3.10}
+\end{equation}
+
+\vspace{1em}
+\textbf{Gradient Descent}\\
+
+Similar to the OLS, we introduce the importance weighted gradient descent algorithm with an initial parameter, $\hat{\theta}_0 = 0$ and step size, $\gamma$. For $t = 1, \ldots, \text{T}-1$, the gradient is iteratively defined as:
+
+\begin{equation}
+    \begin{aligned}
+        \nabla \hat{\mathcal{R}}(\theta) &= \frac{2}{n} \mathbf{X}^\top M_{\omega} (\mathbf{X}\theta - \mathbf{Y})\\
+        &= \frac{2}{n} \mathbf{X}^\top M_{\omega}\mathbf{X}\theta - \frac{2}{n} \mathbf{X}^\top M_{\omega} \mathbf{Y}
+    \end{aligned}
+    \label{eqn:3.11}
+\end{equation}
+
+and the estimated parameter after $t+1$ iterations is given by:
+
+\begin{equation}
+    \begin{aligned}
+        \hat{\theta}_{t+1} &= \hat{\theta}_t - \gamma \nabla \hat{\mathcal{R}}(\hat{\theta}_t)\\
+        &= (\mathbf{I}_d - \gamma \cdot \mathbf{X}^\top M_{\omega} \mathbf{X})\hat{\theta}_t + \frac{\gamma}{n} \mathbf{X}^\top M_{\omega} \mathbf{Y}
+    \end{aligned}
+    \label{eqn:3.12}
+\end{equation}
+
+\subsection{Self-Attention Mechanism}\label{self-attention}
+
+Now we explore another method to estimate the \emph{importance weights}: \textcolor{blue}{\emph{self-attention mechanism}}. Here, the model learns to assign different importance to different training samples dynamically and we treat the importance weights $\omega(X)$ as a trainable parameter just like the regression parameter, $\theta$. The key idea here is that instead of assuming a fixed set of importance weights, we make them trainable parameters and optimize them iteratively.\\
+
+That means, in the self-attention mechanism, we learn the weights jointly with the regression parameter and perform a gradient descent-ascent algorithm. We minimize the empirical loss with respect to the unknown regression parameters (same as before) and we maximize the empirical loss with respect to the weights. We take \emph{gradient ascent} for learning weights because if we directly minimize the loss with respect to the importance weights, the model may reduce all weights to zero. Instead, we maximize the loss with respect to $\omega$ so that the model learns optimal importance weights that help in adjusting for covariate shift.\\
+
+Let the empirical risk be given by
+
+\begin{equation}
+    \hat{\mathcal{R}}(\theta, \omega) := \frac{1}{n} \sum_{i=1}^n m(\omega^{(i)})\ell (y_i, \langle \theta, x_i \rangle)
+    \label{eqn:3.13}
+\end{equation}
+
+where $\omega = (\omega^{(1)}, \ldots, \omega^{(n)})$ is the importance weights for each sample and $m: \mathbb{R} \to \mathbb{R}$ is a masking function.\\
+
+The gradient descent-ascent algorithm with initial regression parameter, $\theta_0 = 0$ and initial weights, $\omega^{(i)}_0$ for all $i = 1, \ldots, n$ is given by:
+
+\begin{equation}
+    \begin{aligned}
+        \theta_{t+1} &= \theta_t - \gamma_t \nabla_{\theta} \hat{\mathcal{R}}(\theta_t, \omega_t)\\
+        \omega_{t+1} &= \omega_t - \eta_t \nabla_{\omega} \hat{\mathcal{R}}(\theta_t, \omega_t)
+    \end{aligned}
+    \label{eqn:3.14}
+\end{equation}
+
+where $\gamma_t$ and $\eta_t$ are the learning rates.\\
+
+The empirical risk in equation \ref{eqn:3.13} can be rewritten in matrix form as
+
+\begin{equation}
+    \begin{aligned}
+        \hat{\mathcal{R}}(\theta, \omega) &= \frac{1}{n} \lVert \mathbf{X}\theta - \mathbf{Y}\rVert_{\text{M}}^2\\
+        &= \frac{1}{n} (\mathbf{X}\theta - \mathbf{Y})^\top \mathbf{M}(\mathbf{X}\theta - \mathbf{Y})
+    \end{aligned}
+    \label{eqn:3.15}
+\end{equation}
+
+where $\mathbf{M} = \text{diag}(m(\omega^{(1)}), m(\omega^{(2)}), \ldots, m(\omega^{(n)})) \in \mathbb{R}^{n \times n}$ is a diagonal matrix containing the weight values.\\
+
+We need to compute the gradients of the above empirical risk with respect to $\omega$ and $\theta$. This can be derived as:
+
+\begin{equation}
+    \begin{aligned}
+        \nabla_{\theta}\hat{\mathcal{R}}(\theta, \omega) &= \frac{2}{n}\mathbf{X}^\top\mathbf{M}(\mathbf{X}\theta - \mathbf{Y})\\
+        \nabla_{\omega}\hat{\mathcal{R}}(\theta, \omega) &= \frac{1}{n} \frac{dM(\omega)}{d\omega} (\mathbf{X}\theta - \mathbf{Y}) \odot (\mathbf{X}\theta - \mathbf{Y})
+    \end{aligned}
+    \label{eqn:3.16}
+\end{equation}
+
+\vspace{1em}
+where $\frac{dM(\omega)}{d\omega} = \text{diag}\left(\frac{dm(\omega^{(j)})}{d\omega^{(j)}}\right)$ and $\odot$ represents the element-wise (\emph{Hadamard}) product.\\
+
+We can plug the values of $\nabla_{\theta}\hat{\mathcal{R}}(\theta, \omega)$ and $\nabla_{\omega}\hat{\mathcal{R}}(\theta, \omega)$ from equation \ref{eqn:3.16} back in equation \ref{eqn:3.14} to get the values of parameter $\theta$ and weights $\omega$ in each iteration.
+
+\vspace{1em}
+\begin{definition}[Masking Function]\label{masking}
+The masking function \emph{modifies how the importance weights are applied} to the loss function. Possible choices are:
 \begin{itemize}
-    \item \textbf{Linear kernel}: $k(X, X') = X^\top X'$
-    \item \textbf{Radial Basis Function (RBF) kernel}: $k(X, X') = \exp (-\gamma \lVert X - X'\rVert^2)$
-    \item \textbf{Polynomial kernel}: $k(X, X') = (X^\top X' + c)^d$
+    \item \emph{Unbounded masking}: $m_q(t) = t^q$ (for some $q \geq 0$)
+    \begin{itemize}
+        \item If $q > 1$, larger weights are emphasized more
+        \item If $q = 0$, the weights are ignored (no importance weighting)
+    \end{itemize}
+    \item \emph{Bounded masking}: $m(t) = tanh(t)$
+    \begin{itemize}
+        \item Ensures that the weights remain within a limited range, preventing extreme values.
+    \end{itemize}
 \end{itemize}
 
-\section{Covariate Shift in Kernel Methods}
-In the kernel framework, the objective is to find a function $f$ in the reproducing Kernel Hilbert Space (RKHS) $\mathcal{H}$ induced by the kernel function $k(\cdot, \cdot)$. Given training data ${(X_i, Y_i)}_{i=1}^{n}$, we aim to minimize the risk:
-$$\mathcal{R}(f) = \mathbb{E}_{\mathbb{P_{\text{train}}}}[\ell(Y, f(X)]$$
-where, $\ell(\cdot, \cdot)$ is a loss function (e.g., squared error for regression, cross-entropy for classification). However, under covariate shift the risk we care about is with respect to the test distribution $\mathbb{P_{\text{test}}}$:
-$$\mathcal{R}_{\text{test}}(f) = \mathbb{E}_{\mathbb{P_{\text{test}}}}[\ell(Y, f(X)]$$
+\end{definition}
 
-\noindent Since $\mathbb{P}_{\text{test}} (X) \neq \mathbb{P}_{\text{train}} (X)$, the standard empirical risk minimization (ERM) on training data may not perform well on the test data.
+\textbf{Choice of Masking Function}\label{choice-masking-q}\\
 
-\noindent\fbox{%
-    \parbox{\textwidth}{%
-        \textbf{Empirical Risk Minimization}\\
-        We recall the goal of supervised learning: Given some observations $(x_j, y_j) \in \mathcal{X}\cdot\mathcal{Y} (j=1, 2, \dots,n)$ of inputs and outputs (or features/variables) that we call \textit{training data} and given a new $x \in \mathcal{X}=\mathbb{R}^d$, predict $y \in \mathcal{Y} = \mathbb{R}$ (\textit{test data}) with a regression function $f: \mathcal{X} \rightarrow \mathcal{Y}$ such that $f(x) \approx y$.
-        \\\\
-        Given data $(x_j, y_j) \in \mathcal{X}\times\mathcal{Y}, j=1, 2, \dots,n$, the empirical risk is defined by:
-        $$\hat{\mathcal{R}}(\theta):= \frac{1}{n}\sum_{j=1}^{n}(y_j-f_{\theta}(x_j))^2, \theta \in \Theta$$
+The ideal value of $q$ in the masking function $m_q(t) = t^q$ depends on the balance between stability and adaptability of the learned importance weights $\omega$:
+\begin{itemize}
+    \item $q=0$: No importance weighting effect, i.e., the model ignores importance weighting and assumes the train and test distributions are the same.
+    \item $0<q<1$: Smoother weighting, prevents extreme values, i.e., the smaller weights are not suppressed too much, and larger weights are not overly emphasized.
+    \item $q=1$: Linear scaling of weights, which directly influence the loss function.
+    \item $q>1$: Large values of $\omega$ get amplified, giving more weight to high-importance samples. This can be useful if the shift is extreme, meaning some test samples are highly underrepresented in training. However, it may lead to instability, where a few samples dominate the training process.
+    \item Very high $q$ (e.g., $q \geq 3$): Risk of instability and overfitting. If a sample gets an unusually high importance weight, it overpowers the entire learning process.
+\end{itemize}
 
-        To obtain a "\textit{good}" or "\textit{reasonable}" estimator, we minimize the empirical risk.
-    }%
-}
+Many studies suggest $q \approx 1$ or slightly lower (e.g., $q \in [0.5, 1]$ works well for general covariate shift scenarios. If the sample size is large, higher values of $q$ (e.g., $1 \leq q \leq 2$) may work better since the weight distribution is smoother. If the sample size is small, lower values of $q$ (e.g., $0.5 \leq q < 1$) prevent individual samples from dominating. If importance weights are estimated with noise, a bounded function like $m(t)=tanh(t)$ may be preferable over any power function.\\
 
-\subsection{Adjusting for Covariate Shift}
-To account for the shift in the distributions, we introduce \textbf{importance weighting}. The idea is to reweight the training data to match the test distribution. If the \textbf{Radon-Nikodym derivative} $w(X)= \frac{\mathrm{d}\mathbb{P_{\text{test}}}(X)}{\mathrm{d}\mathbb{P_{\text{train}}}(X)}$ (i.e., the ratio of the test distribution to the training distribution) is known or can be estimated, we can minimize the weighted empirical risk:
-$$\mathcal{R_{\text{weighted}}}(f):= \frac{1}{n}\sum_{i=1}^{n}w(X_i)\ell(Y_i, f(X_i))$$
+\textbf{Choice of Initial Weight}\\
 
-\noindent This ensures that the training data is effectively "corrected" to resemble the test distribution.
+Choice of $\omega^{(i)}_0$ for all $i = 1, \ldots, n$ is very crucial for the stability and convergence of the gradient descent-ascent algorithm. If the initial weights are $0$, no matter what masking function we select (unbounded or bounded), the masked weights will also be $0$. Now, as we observe from equation \ref{eqn:3.15} and \ref{eqn:3.16}, both gradients of the risk function (with respect to $\theta$ and $\omega$) depends on the masked weights. An initial weights of $0$ means these gradients are also $0$ which means parameter $\theta$ and $\omega$ will not be updated and will be constant across iterations, as the second parts in equation \ref{eqn:3.14} becomes zero.\\
 
-\subsection{Kernel Ridge Regression under Covariate Shift}
-Let us consider \textbf{Kernel Ridge Regression (KRR)}, a kernel-based method for regression that minimizes a regularized empirical loss (with the \textit{least square loss}). Without covariate shift, the solution $f \in \mathcal{H}$ is found by solving:
-% Requires: \usepackage{amsmath}
+Therefore, instead of $0$, we initiate the initial weights $\omega^{(i)}_0$ for all $i = 1, \ldots, n$ with very low value to avoid getting stuck.\\
+
+
+
+
+\textbf{Advantages of Self-attention Mechanism}\\
+
+Self-attention mechanism has several benefits compared to kernel density estimation or similar methods for estimating importance weights:
+
+\begin{itemize}
+    \item \emph{No need for additional data}:
+    \begin{itemize}
+        \item Traditional importance weighting requires estimating density ratios using separate data or assumptions about distributions, whereas, this method provides a data-driven way to adjust for covariate shift without requiring separate density estimation.
+        \item This method learns the importance weights directly during model training.
+    \end{itemize}
+    \item \emph{Dynamic adaptation}:
+    \begin{itemize}
+        \item Since weights are updated iteratively, they adapt based on the learning process, potentially leading to better generalization.
+    \end{itemize}
+    \item \emph{Handles covariate shift more effectively}:
+    \begin{itemize}
+        \item Instead of assuming a fixed distribution shift, this approach lets the model learn the best way to correct for it.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Kernel Mean Matching (KMM)}
+
+Kernel Mean Matching \citep{gretton2009covariate} directly estimates the importance weights without requiring explicit density estimation. Instead, it finds a set of weights $\beta_i$ such that:
+
 \begin{equation}
-    \hat{f} = \arg\min_{f \in \mathcal{H}} \left\{ \frac{1}{n} \sum_{i=1}^{n} (Y_i - f(X_i))^2 + \lambda \| f \|_{\mathcal{H}}^2 \right\},
-    \label{kernel_regression}
+    \sum_i \beta_i \phi(x_i) \approx \sum_j \phi(x_j)
+    \label{eqn:3.17}
 \end{equation}
-where $\lambda > 0$ is a regularization parameter that controls overfitting.
+
+where, $\phi: \mathcal{X} \to \mathcal{H}$, represents the feature mapping used in kernel methods, which maps input data $x_i$ from the original feature space into a high-dimensional reproducing kernel Hilbert space (RKHS), which we already discussed in section \ref{kernel}.\\
+
+This optimization ensures that the empirical kernel mean of the training data matches that of the test data, minimizing the distributional discrepancy in RKHS.
+
+\subsection{Logistic Regression-based Density Ratio Estimation}
+
+Here, we train a logistic regression model to distinguish between samples from the training and test distributions. The model is trained using labeled data, where samples from the training distribution are assigned one label and samples from the test distribution are assigned another. The estimated probabilities from the logistic regression model can then be used to approximate the density ratio between the two distributions \citep{qin1994empirical}. This method is straightforward and works well when the two distributions are not too different, but it may struggle in high-dimensional settings.
+
+\subsection{Kullback-Leibler Importance Estimation Procedure (KLIEP)}
+
+We can also directly estimate the density ratio by minimizing the Kullback-Leibler (KL) divergence between the reweighted training distribution and the test distribution. KLIEP formulates the problem as an optimization task where the density ratio function is learned without explicitly estimating the densities of the two distributions \citep{sugiyama2008kliep}. This approach avoids density estimation and directly finds the importance weights, making it computationally efficient.
+
+\subsection{Least-Squares Importance Fitting (LSIF)}
+
+In LSIF, we estimate the density ratio function $\omega$ by minimizing a squared loss function between the estimated and true density ratios \citep{kanamori2009lsif}. Instead of directly computing probability densities, LSIF uses a regression-like approach to fit the density ratio function in a way that minimizes the squared error. This method is computationally efficient and avoids density estimation altogether. Compared to KLIEP, LSIF often exhibits better numerical stability and is particularly useful in scenarios where importance weighting is required for domain adaptation or sample reweighting.\\
+
+
+In general, importance weighting is very crucial when the model is parametric and misspecified. On the other hand, if the model is well-specified or over-parameterized, importance weighting may not be necessary \citep{gogolashvili2023importance}.
+
+
+\section{Kernel Ridge Regression under Covariate Shift}
+Let us consider \emph{Kernel Ridge Regression (KRR)}, a kernel-based method for regression that minimizes a regularized empirical loss (with the \textit{least square loss}). Without covariate shift, the solution $f \in \mathcal{H}$ is found by solving:
+
+\begin{equation}
+    \hat{f} = \arg\min_{f \in \mathcal{H}} \left\{ \frac{1}{n} \sum_{i=1}^{n} (y_i - f(x_i))^2 + \lambda \| f \|_{\mathcal{H}}^2 \right\},
+    \label{eqn:3.18}
+\end{equation}
+where $\lambda > 0$ is a regularization parameter that controls overfitting.\\
+
+By the \emph{representer theorem} \citep{kimeldorf1971some}, the solution $f(x)$ can be written as a linear combination of kernel functions:
+
+\begin{equation}
+    f(x) = \sum_{i=1}^n \alpha_i K(x, x_i)
+    \label{eqn:3.19}
+\end{equation}
+
+where $K(x, x_i)$ is the kernel function. \\
+
+Solving for $\alpha$ leads to the matrix formulation:
+
+\begin{equation}
+    \hat{\alpha} = (K + \lambda \mathbf{I})^{-1}Y
+    \label{eqn:3.20}
+\end{equation}
 
 To adjust for the covariate shift, we apply the importance weights to the loss function:
-% Requires: \usepackage{amsmath}
+
 \begin{equation}
-    \hat{f} = \arg\min_{f \in \mathcal{H}} \left\{ \frac{1}{n} \sum_{i=1}^{n} w(X_i)(Y_i - f(X_i))^2 + \lambda \|f\|_{\mathcal{H}}^2 \right\}
-\label{eq:cov_shift_kernel_regression}
+    \hat{f} = \arg\min_{f \in \mathcal{H}} \left\{ \frac{1}{n} \sum_{i=1}^{n} \omega(x_i)(y_i - f(x_i))^2 + \lambda \|f\|_{\mathcal{H}}^2 \right\}
+\label{eqn:3.21}
 \end{equation}
 
-\noindent The solution to this problem can be written in terms of the kernel matrix $K \in \mathbb{R}^{n \times n}$ with entries $K_{ij} = k(X_i, X_j)$, and the importance weights can be incorporated into a diagonal matrix $W = \text{diag}(w(X_1), \dots, w(X_n))$. The closed-form solution for the KRR estimator under covariate shift is given by:
+The solution to this problem can be written in terms of the kernel matrix $K \in \mathbb{R}^{n \times n}$ with entries $K_{ij} = k(X_i, X_j)$, and the importance weights can be incorporated into a diagonal matrix $W = \text{diag}(\omega(x_1), \dots, \omega(x_n))$. The closed-form solution for the KRR estimator under covariate shift is given by:
+
 \begin{equation}
-    \hat{f} = (KWK + \lambda I)^{-1}KWY,
-\label{eq:cov_shift_kernel_regression_closed_form}
-\end{equation}
-where $Y=(Y_1, \dots, Y_n)^\top$ is the vector of training labels. This solution adjusts for the shift by weighting the kernel matrix and labels according to the test distribution.
-
-\subsection{Estimating Importance Weights}
-In practice, the true density ratio $w(X)= \frac{\mathbb{P_{\text{test}}}(X)}{\mathbb{P_{\text{train}}}(X)}$ is often unknown. There are several strategies to estimate $w(X)$, including:
-\begin{itemize}
-    \item \textbf{Kernel Density Estimation (KDE)}: Estimate both $\mathbb{P_{\text{train}}}(X)$ and $\mathbb{P_{\text{test}}}(X)$ using kernel density estimators and compute the ratio.
-    \item \textbf{Logistic Regression-based Density Ratio Estimation}: Train a logistic regression model to distinguish between samples from the training and test distributions. The estimated probabilities can be used to approximate the density ratio.
-    \item \textbf{KLIEP (Kullback-Leibler Importance Estimation Procedure)}: Directly estimate the ratio by minimizing the Kullback-Leibler divergence between the reweighted training distribution and the test distribution.
-\end{itemize}
-
-\noindent Once $w(X)$ is estimated, it can be plugged into the weighted KRR formulation to adjust for the covariate shift.
-
-\subsection{Self-Attention for Kernel Methods under Covariate Shift}
-Another approach is the \textbf{self-attention mechanism}, where the importance weights $w(X)$ are learned dynamically along with the model parameters. This can be formulated as a joint optimization problem, where the objective is to \textbf{minimize the empirical loss with respect to both the regression function $f$ and the weights $w(X)$}. The optimization alternates between updating the model parameters $f$ and the weights $w(X)$ using gradient-based methods.
-
-\noindent In kernel-based methods, this can be implemented by introducing learnable parameters $w_i$ for each sample, and optimizing both the KRR objective and the weights simultaneously:
-% Requires: \usepackage{amsmath}
-\begin{equation}
-\label{krr_self_attention}
-\min_{f, w} \left\{ \frac{1}{n} \sum_{i=1}^{n} w(X_i) \, \ell(Y_i, f(X_i)) + \lambda \|f\|_{\mathcal{H}}^2 \right\}
+    \hat{f} = (KWK + \lambda \mathbf{I})^{-1}KWY,
+\label{eqn:3.22}
 \end{equation}
 
-\noindent subject to constraint on $w(X)$ (e.g., positivity, normalization). This allows the model to adapt the importance weights based on the data characteristics, potentially improving performance under complex covariate shift scenarios.
+where $Y=(y_1, \dots, y_n)^\top$ is the vector of training labels. This solution adjusts for the shift by weighting the kernel matrix and labels according to the test distribution.\\
+
+Once $\omega(X)$ is estimated, it can be plugged into the weighted KRR formulation to adjust for the covariate shift.\\
+
+KRR achieves minimax optimal rates under covariate shift when the density ratio is bounded, but naive empirical risk minimization fails to generalize in such settings \citep{ma2022optimally}. Furthermore, when the ratio is unbounded but has a finite second moment, a reweighted KRR with a truncated likelihood ratio yields the best possible estimation rates.
+
+\section{Alternative Strategies}
+
+While importance weighting and Kernel Ridge Regression are very common solutions, several alternative approaches exist to tackle the problem of covariate shift:
+
+\subsection{Domain Adaptation}
+
+Rather than reweighting training samples, domain adaptation techniques aim to learn domain-invariant representations. One of the most popular kernel-based domain adaptation techniques includes: \textcolor{blue}{\emph{Maximum Mean Discrepancy (MMD) Regularization}}.\\
+
+MMD is a measure of discrepancy between two distributions in RKHS \citep{Gretton2012}:
+\begin{equation}
+    \text{MMD}(\mathbb{P}_{\text{train}}, \mathbb{P}_{\text{test}}) = \left\| \mathbb{E}_{\boldsymbol{X} \sim \mathbb{P}_{\text{train}}} [\phi(\boldsymbol{X})] - \mathbb{E}_{\boldsymbol{X} \sim \mathbb{P}_{\text{test}}} [\phi(\boldsymbol{X})] \right\|_{\mathcal{H}}
+    \label{eqn:3.23}
+\end{equation}
+
+\vspace{1em}
+By adding MMD as a regularization term to the kernel learning objective:
+\begin{equation}
+    \min_f \sum_i \ell(f(x_i), y_i) + \lambda \text{MMD}(\mathbb{P}_{\text{train}}, \mathbb{P}_{\text{test}}),
+    \label{eqn:3.24}
+\end{equation}
+
+one encourages the feature space representations of train and test 
+distributions to align, making the learned model more robust to distributional shifts since it forces the distributions to be similar in RKHS.\\
+
+Besides MMS regularization, \textcolor{blue}{\emph{Adversarial Training}} is another popular domain adaptation technique, which also encourages domain-invariant feature learning.
+
+\subsection{Transfer Learning}
+
+Transfer learning leverages knowledge from a source domain to improve learning in the target domain. Kernel-based transfer learning approaches include \emph{Adaptive regularization using RKHS norms} \citep{bach2024learning} and \emph{Subspace alignment techniques using kernel PCA}, where we map training and test distributions into a shared feature space.
+
+\subsection{Robust Risk Minimization in RKHS}
+
+Instead of reweighting, another approach is to explicitly optimize for robustness against worst-case distribution shifts. In the kernel setting, this involves solving a distributionally robust optimization (DRO) problem \citep{Rahimian2019}:
+
+\begin{equation}
+     \min_{f} \sup_{Q \in \mathcal{U}(\mathbb{P}_{\text{train}})} \mathbb{E}_{Q}[\ell(f(X), Y)],
+     \label{eqn:3.25}
+\end{equation}
+
+where $\mathcal{U}(\mathbb{P}_{\text{train}})$ is an uncertainty set around the training distribution, i.e., the set $\mathcal{U}(\mathbb{P}_{\text{train}})$ consists of distributions that are considered close to the training distribution $\mathbb{P}_{\text{train}}$. Kernel methods adapt DRO by defining $\mathcal{U}$ using RKHS-based distances like MMD.

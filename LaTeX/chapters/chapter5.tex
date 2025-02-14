@@ -1,0 +1,137 @@
+\chapter{State of the Art in Covariate Shift Regularization}\label{chp:5}
+
+\emph{Covariate shift}, a fundamental challenge in statistical learning, which occurs when:
+\begin{enumerate}
+    \item the distribution of input features differs between training and test datasets
+    $$\mathbb{P}_{\text{train}}(X) \neq \mathbb{P}_{\text{test}}(X)$$
+    while
+    \item the conditional distribution of the target given the input remains unchanged.
+    $$\mathbb{P}_{\text{train}}(Y \mid X) = \mathbb{P}_{\text{test}}(Y \mid X)$$
+\end{enumerate}
+
+In supervised learning algorithms, various recent studies have advanced our understanding of effective adaptation strategies under covariate shift. While Reproducing Kernel Hilbert Space (RKHS)-based methods have received significant attention due to their strong theoretical foundation, other approaches including neural networks and decision trees, which have been studied in the context of covariate shift adaptation, have also shown promising results. For instance, neural networks have been investigated with domain adaptation techniques such as adversarial training, while decision trees leverage reweighting methods to adjust for distributional differences.\\
+
+\section{When Is Importance Weighting Necessary?}
+
+\citep{gogolashvili2023importance} investigated scenarios where importance weighting enhances learning performance. Importance weighting is particularly useful when the model is misspecified. In such cases, accounting for distributional differences through weighting improves estimation accuracy and mitigates biases introduced by the different distribution of the training set. Given a source distribution $\mathbb{P}_{\mathcal{S}}(X)$ and a target distribution $\mathbb{P}_{\mathcal{T}}(X)$, the expected risk under importance weighting \citep{sugiyama2000covariate} is given by:
+
+\begin{equation}
+    \mathcal{R}_{\omega}(\theta) = \mathbb{E}_{\mathbb{P}_{\mathcal{T}}}[\ell (Y, f(X; \theta))] = \mathbb{E}_{\mathbb{P}_{\mathcal{S}}}[\omega(X) \ell (Y, f(X; \theta))]
+    \label{eqn:5.1}
+\end{equation}
+
+where $w(X) = \frac{d\mathbb{P}_{\mathcal{T}}(X)}{d\mathbb{P}_{\mathcal{S}}(X)}$ is the importance weight.\\
+
+However, when the model is already well-specified, the necessity of importance weighting diminishes, especially as sample size increases. For large sample sizes, direct kernel ridge regression (KRR) without reweighting can achieve near-optimal performance, making importance weighting less critical.
+
+\section{Optimal Learning Under Covariate Shift}
+
+\citep{ma2022optimally} explored minimax-optimal learning strategies under covariate shift and demonstrated that Kernel ridge regression (KRR) combined with importance weighting attains the minimax rate when the density ratio function $\omega(X)$ is bounded, ensuring stable learning despite shifts in data distribution. When $\omega(X)$ is unbounded but possesses a finite second moment, truncated importance weighting provides optimal learning rates by preventing extreme weight values from destabilizing model training. The optimal weighted KRR estimator is given by:
+
+\begin{equation}
+    \hat{f} = \argmin_{f \in \mathcal{H}_K} \sum_{i=1}^n \omega(x_i) \ell(y_i, f(x_i; \theta))^2 + \lambda \lVert f \rVert_{\mathcal{H}_K}^2
+    \label{eqn:5.2}
+\end{equation}
+
+where $\mathcal{H}_K$ is the RKHS associated with kernel $K$, and $\lambda$ is the regularization parameter.
+
+\section{RKHS-based Theoretical Analysis and Generalization Bounds}
+
+\citep{bach2024learning} and \citep{mohri2018foundations} extended theoretical analyses of RKHS-based learning under distribution shifts. A well-regularized kernel model within RKHS frameworks enhances model generalization under covariate shift and exhibits stable out-of-sample performance by controlling the complexity of the function class and preventing overfitting to the biased training data.\\
+
+Properly chosen kernel parameters can significantly reduce sensitivity to covariate shift, reinforcing the role of regularization in robust machine learning. Regularization techniques, such as norm control in RKHS, play a pivotal role in mitigating performance degradation under distributional shifts. The RKHS norm control is achieved through:
+
+\begin{equation}
+    \min_{f \in \mathcal{H}_K} \lVert f \rVert_{\mathcal{H}_K}^2 \quad \text{subject to} \quad \mathbb{E}_{\mathbb{P}_{\mathcal{T}}}[\ell (y, f(x; \theta))] \leq \epsilon
+    \label{eqn:5.3}
+\end{equation}
+
+ensuring bounded model complexity under covariate shift. A generalization bound for learning under covariate shift is given by:
+
+\begin{equation}
+    \mathcal{R}_{\mathbb{P}_{\mathcal{T}}}(f) \leq \mathcal{R}_{\mathbb{P}_{\mathcal{S}}}(f) + \mathcal{O} \left( \sqrt{\frac{\mathbb{E}_{\mathbb{P}_{\mathcal{S}}}[w(x)^2]}{n}} \right)
+    \label{eqn:5.4}
+\end{equation}
+
+where $\mathcal{R}_{\mathbb{P}_{\mathcal{T}}}(f)$ and $\mathcal{R}_{\mathbb{P}_{\mathcal{S}}}(f)$ are the risks under target and source distributions, respectively.
+
+\section{Covariate Shift Adaptation via Importance-Weighted Cross-Validation}
+
+\citep{sugiyama2000covariate} pioneered the use of importance-weighted cross-validation (IWCV) as a method for adapting to covariate shift. IWCV can be an effective technique for model selection under covariate shift, ensuring that models generalize well to the test distribution. It was demonstrated that IWCV significantly improves model selection accuracy compared to standard cross-validation, particularly in scenarios with large distribution discrepancies between training and test sets. To compensate for the effect of the covariate shift in the standard CV procedure, following importance weighted cross validation (IWCV) variant was proposed
+
+\begin{equation}
+    \hat{R}_{\text{kIWCV}}^{(n)} = \frac{1}{k} \sum_{i=1}^k \frac{1}{\lvert \mathcal{T}_i \rvert} \sum_{(x, y) \in \mathcal{T}_i} w(x) \ell(y, \hat{f}_{\mathcal{T}_i}(x))
+    \label{eqn:5.5}
+\end{equation}
+
+and
+
+\begin{equation}
+    \hat{R}_{\text{LOOIWCV}}^{(n)} = \frac{1}{n} \sum_{i=1}^n w(x) \ell(y_i, \hat{f}_i(x_i))
+    \label{eqn:5.6}
+\end{equation}
+
+for K-fold cross validation and Leave-One-Out cross validation, respectively. LOOIWCV gives an almost unbiased estimate of the risk even under the covariate shift.
+
+\section{Covariate Shift Adaptation in Neural Networks and Decision Trees}
+
+Recent studies have explored methods for handling covariate shift in neural networks and decision trees, two widely used supervised learning models. These approaches leverage domain adaptation techniques, reweighting strategies, and adversarial learning to improve generalization across shifting distributions.
+
+\subsection{Neural Networks and Domain Adaptation}
+
+Neural networks are particularly susceptible to distribution shifts due to their reliance on large-scale training data. Several methods have been proposed to handle this challenge, with adversarial domain adaptation being one of the most effective techniques. \citep{ganin2016domain} introduced the \emph{Domain-Adversarial Neural Network (DANN)}, which minimizes domain discrepancy by learning domain-invariant features using a domain classifier. Given a source distribution $\mathbb{P}_{\mathcal{S}}(X)$ and a target distribution $\mathbb{P}_{\mathcal{T}}(X)$, adversarial training minimizes the domain discrepancy by optimizing:
+
+\begin{equation}
+    \min_{f} \min_{D} \mathbb{E}_{\mathbb{P}_{\mathcal{S}}}[\log D(f(X))] + \mathbb{E}_{\mathbb{P}_{\mathcal{T}}}[\log (1 - D(f(X)))]
+    \label{eqn:5.7}
+\end{equation}
+
+where $f(X)$ is the feature representation learned by the neural network, and 
+$D(X)$ is a domain classifier that distinguishes between source and target distributions. The adversarial loss forces $f(x)$ to generate domain-invariant representations.\\
+
+Another strategy is \emph{importance-weighted training for deep networks}, where a weighted loss function is used:
+
+\begin{equation}
+    \hat{\mathcal{R}}_\omega(\theta) = \sum_{i=1}^n \omega(x_i) \ell(y_i, f(x_i; \theta))
+    \label{eqn:5.8}
+\end{equation}
+
+where $\omega(x_i) = \frac{\mathbb{P}_{\mathcal{T}}(x_i)}{\mathbb{P}_{\mathcal{S}}(x_i)}$ accounts for distributional differences, allowing the model to focus more on examples similar to the test distribution.
+
+\subsection{Decision Trees and Reweighting Methods}
+
+Decision trees, including ensemble methods like Random Forests and Gradient Boosted Trees, often handle covariate shift using reweighting and resampling techniques.
+
+\begin{itemize}
+    \item \textbf{Reweighting Training Instances:}\\
+    Similar to kernel methods, decision trees adjust for covariate shift by modifying instance weights. For a loss function $\ell (y, f(x; \theta))$, the weighted empirical risk is:
+    
+    \begin{equation}
+        \mathcal{R}_w(\theta) = \sum_{i=1}^n w(x_i) \ell(y_i, f(x_i; \theta))
+        \label{eqn:5.9}
+    \end{equation}
+    
+    ensuring that samples from the shifted test distribution receive higher influence.
+    
+    \item \textbf{Sample Reweighting via Bias Correction:}\\
+    \citep{sugiyama2000covariate} proposed a bias correction method for tree-based models, where the training set is modified to match the test distribution using importance weighting.
+
+    \item \textbf{Domain-Adaptive Decision Trees:}\\
+    \citep{zhao2021domain} introduced decision trees optimized for covariate shift by incorporating distributional constraints into the splitting criteria:
+
+    \begin{equation}
+        \text{Split criterion} = \text{Gini}(\mathcal{S}) - \lambda \cdot \mathbb{E}[w(x)]
+        \label{eqn:5.10}
+    \end{equation}
+
+    where $\lambda$ controls the impact of distribution weighting, ensuring that splits are more aligned with the test distribution and $\text{Gini}(\mathcal{S})$ is the Gini index (or Gini impurity) for the dataset $\mathcal{S}$. Gini index (or Gini impurity) is a measure of the impurity or uncertainty in a dataset, commonly used in decision trees for selecting the best feature to split on.
+\end{itemize}
+
+Recent research has advanced covariate shift adaptation across RKHS-based learning, neural networks, and decision trees. Importance weighting remains crucial for misspecified models and unbounded density ratios, while RKHS regularization and generalization bounds enhance robustness. Neural networks mitigate shift through adversarial adaptation and importance weighting, whereas decision trees leverage reweighting and modified splitting criteria. Combining these approaches with kernel methods provides a comprehensive framework for handling covariate shift. Future work should focus on scalable, adaptive strategies to improve generalization in real-world applications.
+
+
+
+
+
+
+

@@ -1,0 +1,7 @@
+\chapter{Conclusion}\label{chp:7}
+
+Our experimental setup investigates the impact of covariate shift in linear regression models, particularly focusing on how a shift in the input mean affects Mean Squared Error (MSE) for different estimators. The study is conducted using both Ordinary Least Squares (OLS) and Gradient Descent (GD) estimators, followed by regularization techniques like importance weighting using Kernel Density Estimation (KDE) and a Self-Attention Mechanism.\\
+
+The experiments confirm that covariate shift significantly impacts model performance, particularly for standard estimators like OLS. Gradient Descent adapts better to shift conditions, especially when combined with importance weighting techniques. Regularization methods, such as kernel-based importance weighting and self-attention mechanisms, effectively reduce MSE, making them valuable strategies for mitigating the negative effects of distributional shifts. It was also found that sample size and proper selection of masking function in self-attention mechanism also plays a crucial role in the rate of convergence in regularizing the effect of covariate shift.\\
+
+These findings highlight the necessity of incorporating robust adaptation techniques in machine learning models deployed in real-world scenarios where covariate shift is prevalent.

@@ -1,47 +1,109 @@
 % Main file: main.tex
 % Compile this file to build the full document
 
-\documentclass[a4paper,12pt]{report} % Use book class for structured documents
-\usepackage[utf8]{inputenc}        % Support for UTF-8 characters
-\usepackage{amsmath, amssymb}      % Mathematical symbols and equations
-\usepackage{graphicx}              % For including images
-\usepackage[font=scriptsize]{caption}
-\usepackage{hyperref}              % For hyperlinks
-% \usepackage[super]{natbib}         % Bibliography support
-\usepackage{geometry}              % Page layout customization
-\usepackage{titlesec}              % For customizing section titles
+\documentclass[a4paper,12pt,twoside]{report} % Use book class for structured documents
+\usepackage[square]{natbib}          % Bibliography support
+\renewcommand{\citepunct}{; }
+\usepackage[utf8]{inputenc}          % Support for UTF-8 characters
+\usepackage{amsmath, amssymb}        % Mathematical symbols and equations
+\usepackage{amsthm}                  % For theorem-like environments
+\usepackage{graphicx, animate}       % For including images and animations
+\usepackage[font=small, labelfont=bf]{caption}
+\usepackage{subcaption}              % Provides subfigure support
+% \usepackage{ragged2e}                % Provides \RaggedRight
+\usepackage{etoolbox}
+\usepackage{hyperref}                % For hyperlinks
+
+
+
+\usepackage[english]{babel}
+\usepackage{geometry}                % Page layout customization
+\usepackage{titlesec}                % For customizing section titles
 \usepackage{fancyhdr}
 \usepackage[table]{xcolor}
 \usepackage{tabularx}
 % \usepackage{cite}
 \usepackage{xcolor}
-% Define a custom highlight command
-\newcommand{\highlight}[1]{\colorbox{yellow}{#1}}
-\usepackage{soul}
+\newcommand{\highlight}[1]{\colorbox{yellow}{#1}} % Custom highlight command
+\usepackage{soul}                    % For colour management
+\usepackage[nottoc]{tocbibind}       % Includes "References" in ToC
+\usepackage{algorithm}               % For writing algorithms
+\usepackage{algorithmic}             % For algorithmic environments
+\renewcommand{\thealgorithm}{\thesection.\arabic{algorithm}}  % Modify algorithm number to include section number
 
-\makeatletter
-\renewcommand\@biblabel[1]{[#1]} % Adds brackets in the bibliography
-\renewcommand\@cite[2]{\textsuperscript{[#1]}} % Adds brackets in the superscript citation
-\makeatother
+% Defining argmin and argmax operator
+% -----------------------------------
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% Define a new theorem style for definitions
+% ------------------------------------------
+\newtheoremstyle{definition}
+  {10pt} % Space above
+  {10pt} % Space below
+  {\normalfont} % Body font
+  {} % Indent amount
+  {\bfseries} % Theorem head font
+  {.} % Punctuation after theorem head
+  {.5em} % Space after theorem head
+  {} % Theorem head spec (can be left empty, meaning 'normal')
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+% Define a new theorem style for propositions
+% ------------------------------------------
+\newtheoremstyle{proposition}
+  {10pt} % Space above
+  {10pt} % Space below
+  {\normalfont} % Body font
+  {} % Indent amount
+  {\bfseries} % Theorem head font
+  {.} % Punctuation after theorem head
+  {.5em} % Space after theorem head
+  {} % Theorem head spec (can be left empty, meaning 'normal')
+
+\theoremstyle{proposition}
+\newtheorem{proposition}{Proposition}[section]
+
+% Define a new theorem style for examples
+% ------------------------------------------
+\newtheoremstyle{example}
+  {10pt} % Space above
+  {10pt} % Space below
+  {\normalfont} % Body font
+  {} % Indent amount
+  {\bfseries} % Theorem head font
+  {.} % Punctuation after theorem head
+  {.5em} % Space after theorem head
+  {} % Theorem head spec (can be left empty, meaning 'normal')
+
+\theoremstyle{example}
+\newtheorem{example}{Example}[section]
+
 
 % Page layout settings
 \geometry{margin=1in}
 
 % Customizing Chapter Heading Style
 \titleformat{\chapter}[block] % 'block' means the title will be on its own line
-  {\normalfont\Huge\bfseries} % Font settings for the chapter title
+  {\normalfont\huge\bfseries} % Font settings for the chapter title
   {\thechapter}               % Numbering format (e.g., "1")
   {1em}                       % Space between the number and title
   {}                          % No prefix for the chapter title
 
 
+
 \begin{document}
 
 \pagestyle{fancy}
-\fancyhead{} % clear all header fields
-\fancyhead[LO,RE]{\small\nouppercase{\rightmark}}
-\fancyfoot{} % clear all footer fields
-\fancyhead[LE,RO]{\small\thepage}
+\fancyhead{}                                 % clear all header fields
+\fancyfoot{}                                 % clear all footer fields
+
+\fancyhead[LE, RO]{\small\nouppercase{\rightmark}}  % Section/Chapter title on left (even pages)
+
+\fancyfoot[C]{\small\thepage}  % Page number centered in the footer
+
 \renewcommand{\headrulewidth}{0pt}
 
 % Title Page
@@ -53,7 +115,6 @@
 % Blank Page before Summary
 \cleardoublepage
 % \thispagestyle{empty} % Removes page number
-% This is a blank page
 
 % Customizing Summary Heading Size
 \titleformat{\section}[block]
@@ -62,13 +123,12 @@
 % Summary Page
 \newpage
 \vspace*{5cm} % Push the content to the middle of the page
-\section*{\highlight{Abstract}}
+\section*{Abstract}
 % \addcontentsline{toc}{section}{Summary} % Add to Table of Contents
-Lorem Ipsum
+Covariate shift, a fundamental challenge in supervised learning, occurs when the distribution of input features differs between training and test datasets while the conditional distribution of the target given the input remains unchanged. This work explores covariate shift through the lens of kernel-based learning, particularly in linear regression settings. We analyze theoretical foundations, propose strategies for mitigating covariate shift using importance weighting with weights estimated by kernel density estimation and self-attention mechanisms.\\
 
-\setlength{\parskip}{1em} % Adds vertical space between paragraphs
-\setlength{\parindent}{15pt} % Removes paragraph indentation
-Lorem Ipsum
+We conduct experiments using synthetic data to assess the effect of mean shift on model performance, comparing ordinary least squares and gradient descent estimators. Our findings highlight the importance of robust learning strategies in the presence of covariate shift and emphasize the role of kernel-based techniques in domain adaptation and distributionally robust optimization.
+
 
 % Reverting Section Heading Size
 \titleformat{\section}[block]
@@ -76,21 +136,33 @@ Lorem Ipsum
 
 \titleformat{\subsection}[block]{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
 
+% Settings for the entire document
+\setlength{\parskip}{0em}           % Adds vertical space b/w paragraphs
+\setlength{\parindent}{0pt}         % Remove paragraph indent
+
+
 % Table of Contents
 \newpage
 \tableofcontents
 \newpage
 
-% Include chapters
 
+
+% Include chapters
 \include{chapters/chapter1} % Introduction
 \include{chapters/chapter2}
 \include{chapters/chapter3}
+\include{chapters/chapter4}
+\include{chapters/chapter5}
+\include{chapters/chapter6}
+\include{chapters/chapter7}
 
 
 % Bibliography Section
-\bibliographystyle{ieeetr} % Style for bibliography
-% \bibliographystyle{unsrt} % Style for bibliography
-\bibliography{bibliography} % References in bibliography.bib
+% \bibliographystyle{ieeetr}            % Style for bibliography
+% \bibliographystyle{unsrt}             % Style for bibliography
+% \bibliographystyle{alpha}             % Style for bibliography
+\bibliographystyle{apalike}
+\bibliography{bibliography}             % References in bibliography.bib
 
 \end{document}

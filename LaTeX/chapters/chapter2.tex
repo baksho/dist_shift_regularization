@@ -1,9 +1,118 @@
-\chapter{Overview: Covariate Shift}\label{chp:2}
+\chapter{Covariate Shift}\label{chp:2}
 
-Covariate shift occurs when the marginal distribution of the input variables $\mathbb{P}_{\text{train}} (\mathcal{X})$ differs between the training and testing phases, while the conditional distribution of the output given the input $\mathbb{P}(\mathcal{Y}|\mathcal{X})$ remains unchanged.
+Formally, let $\mathcal{X} \in \mathbb{R}^d$ be the input space from which samples $x$ are drawn and $\mathcal{Y} \in \mathbb{R}$ (or $\mathcal{Y} \in \{0,1\}$ in classification tasks) be the output space. In the standard supervised learning setting, we have access to a training dataset $\{(x_i, y_i)\}_{i=1}^n$ samples from the joint distribution $\mathbb{P}_{\text{train}}(X, Y)$ and we aim to learn a function $f: \mathbb{R}^d \rightarrow \mathbb{R}$ that generalizes well to the new, unseen data from the test distribution $\mathbb{P}_{\text{test}}(X, Y)$. We do that by selecting the function $f: \mathcal{X} \to \mathcal{Y}$ that minimizes the \emph{expected risk}:
 
-\noindent Mathematically, this is expressed as:
-$$\mathbb{P}_{\text{train}} (\mathcal{X}) \neq \mathbb{P}_{\text{test}} (\mathcal{X})$$
-$$\mathbb{P}_{\text{train}}(\mathcal{Y}|\mathcal{X}) = \mathbb{P}_{\text{test}}(\mathcal{Y}|\mathcal{X})$$
+$$\mathcal{R}(f) = \mathbb{E}_{\mathbb{P}_{\text{train}}(\mathcal{X},\mathcal{Y})}[\ell(f(X; \theta), Y)]$$
 
-\noindent The goal is to learn a function $f$ during training, based on data ${(X_i, Y_i)}_{i=1}^{n} \sim \mathbb{P}_{\text{train}}(\mathcal{X}, \mathcal{Y})$, that  generalizes well on the test distribution $\mathbb{P}_{\text{test}}(\mathcal{X}, \mathcal{Y})$. The change is to adjust for the mismatch between $\mathbb{P}_{\text{train}} (\mathcal{X})$ and $\mathbb{P}_{\text{test}} (\mathcal{X})$, which can degrade model performance.
+where, $\ell: \mathbb{R} \times \mathbb{R} \to \mathbb{R}$ is a suitable loss function and $\theta$ is the parameter that we aim to learn.\\
+
+Covariate shift occurs when (1) the marginal distribution of the input features (covariates) $X$ differs between the training and testing phases, while (2) the conditional distribution of the output given the input $\mathbb{P}(Y \mid X)$ remains unchanged. This means that while the relationship between the input features and the target variable doesn't change, the way the input features are distributed does. Mathematically, we can break it down as below.\\
+
+Let us define the training and test distributions by $\mathbb{P}_{\text{train}}(X, Y)$ and $\mathbb{P}_{\text{test}}(X, Y)$ respectively. Then under covariate shift, it holds that:
+
+\begin{itemize}
+    \item \textbf{Input Distribution Change}: The probability distribution $\mathbb{P}(X)$ of the input variables $X$ changes between training and testing.
+    $$\mathbb{P}_{\text{train}} (X) \neq \mathbb{P}_{\text{test}} (X)$$
+    \item \textbf{Conditional Distribution Stability}: The conditional distribution $\mathbb{P}(Y \mid X)$ of the target variable $Y$ given the input variables $X$ remains the same.
+    $$\mathbb{P}_{\text{train}}(Y \mid X) = \mathbb{P}_{\text{test}}(Y \mid X)$$
+\end{itemize}
+
+This mismatch between $\mathbb{P}_{\text{train}} (X)$ and $\mathbb{P}_{\text{test}} (X)$ can degrade the model performance to a great extent, as standard empirical risk minimization (ERM) minimizes the risk under $\mathbb{P}_{\text{train}} (X)$ rather than $\mathbb{P}_{\text{test}} (X)$. In other words, the model was trained on a different distribution of input features. The model may not generalize well if the training data does not adequately represent the test data. Our goal is to adjust for this change while learning the function $f: \mathbb{R}^d \rightarrow \mathbb{R}$ during model training based on the data ${(x_i, y_i)}_{i=1}^{n} \sim \mathbb{P}_{\text{train}}(X, Y)$.
+
+\section{Covariate Shift in Kernel Methods}\label{kernel}
+
+Kernel methods operate by embedding input data $X \in \mathbb{R}^d$ into a high-dimensional feature space $\mathcal{H}$ through a mapping function $\phi: \mathbb{R}^d \to \mathcal{H}$, where $\mathcal{H}$ is a reproducing kernel Hilbert space (RKHS) with inner product $\langle \cdot, \cdot \rangle_{\mathcal{H}}$. Algorithms such as kernel ridge regression (KRR), support vector machines (SVMs), and Gaussian processes (GPs) operate in such RKHS \citep{scholkopf2002learning}. Instead of explicitly computing the mapping $\phi(X)$, kernel methods compute inner products in the feature space using a \textbf{kernel function} $k: \mathbb{R}^d \times \mathbb{R}^d \to \mathbb{R}$:
+$$k(X_i, X_j) = \langle \phi(X_i), \phi(X_j) \rangle_{\mathcal{H}}$$
+
+\textbf{Note}: A Reproducing Kernel Hilbert Space (RKHS) is a special type of Hilbert space that is associated with a kernel function and has reproducing property. For any function $f$ in RKHS and any point $x$, we have:
+
+$$f(x) = \langle f, K(x, \cdot) \rangle_{\mathcal{H}}$$
+
+This means that evaluating $f(x)$ is equivalent to taking an inner product with the kernel function.\\
+
+Common kernel functions include:
+\begin{itemize}
+    \item \textbf{Linear kernel}: $k(X_i, X_j) = X_i^\top X_j$
+    \item \textbf{Radial Basis Function (RBF) kernel}: $k(X_i, X_j) = \exp (-\gamma \lVert X_i - X_j\rVert^2)$
+    \item \textbf{Polynomial kernel}: $k(X_i, X_j) = (X_i^\top X_j + c)^d$, where $d$ is the degree of polynomial kernel
+\end{itemize}
+
+In the context of kernel methods, the problem of covariate shift is particularly relevant when learning from data mapped into a reproducing kernel Hilbert space (RKHS). Since kernel methods rely on similarity measures derived from the feature distribution, a shift in the marginal distribution can lead to biased estimates and deteriorated generalization performance. Given a kernel function $k(X_i, X_j)$, these methods rely on the assumption that training and test distributions are aligned in the RKHS.\\
+
+When covariate shift occurs, kernel-based models face the following issues:\\
+\begin{enumerate}
+    \item \textbf{Biased Function Estimation}\\
+    
+    In the kernel framework, for many kernel-based learning methods, such as kernel least squares regression or SVMs, the objective is to find a function $f$ in the reproducing Kernel Hilbert Space (RKHS) $\mathcal{H}$ induced by the kernel function $k(\cdot, \cdot)$. We do so by minimizing the empirical risk over the given training data $\{(X_i, Y_i)\}_{i=1}^{n}$:
+
+    \begin{equation}
+        \min_f \mathcal{R}(f) = \min_f \mathbb{E}_{\mathbb{P_{\text{train}}}}[\ell(Y, f(X)]
+        \label{eqn:2.1}
+    \end{equation}
+    
+    where, $\ell(\cdot, \cdot)$ is a loss function (e.g., squared error for regression, cross-entropy for classification). However, under covariate shift the risk we care about is with respect to the test distribution $\mathbb{P_{\text{test}}}$:
+
+    \begin{equation}
+        \min_f \mathcal{R}_{\mathbb{P}_\text{test}}(f) = \min_f \mathbb{E}_{\mathbb{P_{\text{test}}}}[\ell(Y, f(X)]
+        \label{eqn:2.2}
+    \end{equation}
+    
+    Now, since $\mathbb{P}_{\text{train}} (X) \neq \mathbb{P}_{\text{test}} (X)$, the empirical risk computed from training samples no longer represents the expected test risk, leading to biased estimators  \citep{shimodaira2000improving}.
+    
+    \item \textbf{Shifted Kernel Mean Embeddings}\\
+    
+    Kernel methods provide a powerful framework for nonparametric learning by embedding probability distributions into a reproducing kernel Hilbert space (RKHS) \citep{gretton2009covariate}. The central idea is to map a probability distribution $\mathbb{P}$ to a feature space through its expectation:
+
+    \begin{equation}
+        \mu_{\mathbb{P}} = \mathbb{E}_{X \sim \mathbb{P}}[\phi(X)]
+        \label{eqn:2.3}
+    \end{equation}
+    
+    where $\phi(X)$ is a feature map induced by a positive definite kernel. Such feature space representations based on kernel mean embeddings allows us to compare distributions in RKHS using the Maximum Mean Discrepancy (MMD):
+
+    \begin{equation}
+        \text{MMD}(P,Q) = \lVert \mu_P - \mu_Q \rVert_{\mathcal{H}}
+        \label{eqn:2.4}
+    \end{equation}
+    
+    Under covariate shift, the training and test distributions differ in their marginal distribution of inputs, i.e., $\mathbb{P}_{\text{train}}(X) \neq \mathbb{P}_{\text{test}}(X)$, while keeping the conditional distribution of labels given inputs the same: $\mathbb{P}(Y \mid X)$ remains unchanged in both training and test set. This shift results in a discrepancy between the mean embeddings:
+
+    \begin{equation}
+        \mu_{\text{train}} = \mathbb{E}_{X \sim \mathbb{P}_{\text{train}}}[\phi(X)]] \neq \mu_{\text{test}} = \mathbb{E}_{X \sim \mathbb{P}_{\text{test}}}[\phi(X)]]
+        \label{eqn:2.5}
+    \end{equation}
+
+    \item \textbf{Kernel-based Generalization Bounds}\\
+
+    Theoretical guarantees for generalization in RKHS often involve a complexity term (e.g. Rademacher complexity) dependent on the distribution of training samples. For models based on Reproducing Kernel Hilbert Spaces (RKHS), this complexity term depend on the spectral properties of kernel matrices formed using the training data. \citep{mohri2018foundations}\\ 
+    
+    When covariate shift occurs, i.e., when $\mathbb{P}_{\text{train}}(X) \neq \mathbb{P}_{\text{test}}(X)$ while $\mathbb{P}(Y \mid X)$ remains unchanged, the spectral properties of the kernel matrix change, affecting generalization bounds. This alteration affects Rademacher complexity, which quantify the capacity of a function class in terms of how well the learned function can fit random noise and generalize to unseen test data.
+
+    Given a function class $\mathcal{F}$ and training points $x_1, x_2, \ldots, x_n \sim \mathbb{P}_{\text{train}}(X)$, the empirical Rademacher complexity is defined as:
+
+    \begin{equation}
+        \hat{\mathcal{R}}_n(\mathcal{F}) = \mathbb{E}_{\sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^{n}\sigma_i f(x_i)\right]
+        \label{eqn:2.6}
+    \end{equation}
+    
+    where, $\sigma_i$ are Rademacher variables (independent uniform random variables taking values $\pm 1$. In the RKHS setting with a kernel $k$, a standard bound \citep{mohri2018foundations} states:
+
+    \begin{equation}
+        \hat{\mathcal{R}}_n(\mathcal{F}) \leq \frac{B}{n} \sqrt{\sum_{i=1}^{n} k(X_i, X_i)}
+        \label{eqn:2.7}
+    \end{equation}
+    
+    where $B$ is an upper bound on the norm of functions in the RKHS.\\
+
+    When training and test distributions differ, the kernel matrix $K$, whose entries are $K_{ij} = K(X_i, X_j)$, has different spectral properties under $\mathbb{P}_{\text{train}}$ and $\mathbb{P}_{\text{test}}$. Specifically, if $\lambda_1 \geq \lambda_2 \geq \ldots$ are the eigenvalues of $K$ under $\mathbb{P}_{\text{train}}$, these eigenvalues change when computed under $\mathbb{P}_{\text{test}}$. A heavier-tailed test distribution (e.g., more variance in feature space) can increase the effective dimension of the RKHS function class, increasing Rademacher complexity. A typical generalization bound for an RKHS-based learning function $f$ trained under $\mathbb{P}_{\text{train}}$ but tested on $\mathbb{P}_{\text{test}}$ takes the form:
+
+    \begin{equation}
+        \mathbb{E}_{X \sim \mathbb{P}_{\text{test}}}[\lvert f(X) - f^*(X)\rvert] \leq \mathcal{O} \left( \sqrt{\frac{\hat{\mathcal{R}}_n^w(f)}{n}} + \text{MMD}(\mathbb{P}_{\text{train}}, \mathbb{P}_{\text{test}}) \right)
+        \label{eqn:2.8}
+    \end{equation}
+    
+    where, $f^*$ is the optimal function under $\mathbb{P}_{\text{test}}$ and $\hat{\mathcal{R}_n^w(f)}$ is the weight-adjusted empirical Rademacher complexity. The MMD term highlights that \emph{greater distribution shift increases generalization error}.\\
+
+\end{enumerate}
+
+Such misalignment due to the distribution shift influences how well the learned function generalizes to test data. \citep{mohri2018foundations} provides theoretical frameworks for different techniques such as importance weighting (e.g., Kernel Mean Matching (KMM)) or distributionally robust optimization, to compensate for such shifts and their effects. It can be shown that effective dimension growth under covariate shift leads to weaker generalization guarantees.

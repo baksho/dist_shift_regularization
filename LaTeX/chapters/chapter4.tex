@@ -1,0 +1,225 @@
+\chapter{Supervised Learning under Covariate Shift}\label{chp:4}
+
+Let us explore the problem of covariate shift under the settings of supervised learning.\\
+
+Let $\mathcal{S} = \{(x_i, y_i)\}_{i=1}^n$ be the training samples, where $X = \{x_i\} \in \mathcal{X} \subset \mathbb{R}^d$ is i.i.d. training samples following a probability distribution $\mathbb{P}_{\text{train}}(X)$ and $Y = \{y_i\} \in \mathcal{Y} \subset \mathbb{R}$ is a corresponding training output value following a conditional probability distribution $\mathbb{P}(Y \mid X)$.\\
+
+Let $\ell(y, \hat{y})$ be the \emph{loss function}, which measures the discrepancy between the true output value $y$ at an input point $x$ and its estimate $\hat{y}$. Let us employ a parametric model $\hat{f}(x; \theta)$ for estimating the output value $y$, where $\theta \in \mathbb{R}^d \subset \Theta$ (a parameter space). A model $\hat{f}(x; \theta)$ is said to be \emph{correctly specified} if there exists a parameter $\theta^*$ such that $\hat{f}(x; \theta^*) = f(x)$; otherwise the model is said to be \emph{misspecified}.\\
+
+\section{Goal of Supervised Learning Algorithms}
+Let us consider a test sample, which is not known during the training phase, and we denote this test sample by $(\tilde{X}, \tilde{Y}) \in \mathcal{T}$, where $\tilde{X}$ are the test input points and $\tilde{Y}$ are the corresponding test output values, both of which are unknown during the training phase.\\
+
+In a traditional supervised learning algorithm (regression or classification), we try to estimate an unknown relationship between input and output variables from the training samples $\mathcal{S} = \{(x_i, y_i)\}_{i=1}^n$, which we can use to predict a real-valued response $\hat{y}_t$ based on a vector of covariates $\tilde{x}_t$ from the test dataset $\mathcal{T}$.\\
+
+In other words, the goal of supervised learning  is to determine the value of the parameter $\theta$ from the training samples, so that output values for unlearned test input points are estimated \emph{as accurately as possible} i.e., $\hat{y}_t = f(\tilde{x}_t;\hat{\theta}) \approx \tilde{y}_t$ for all $(\tilde{x}_t, \tilde{y}_t) \in \mathcal{T}$. Here, $\hat{\theta}$ is the estimated (learned) parameter, which generally depends on $\mathcal{S} = \{(x_i, y_i)\}_{i=1}^n$.\\
+
+We assume that the pair $(X,Y)$ has an unknown distribution $\mathbb{P}$ and $X$ has marginal distribution $\mathbb{P}_{X}$ (we refer to it as the \emph{source distribution}). We aim to learn the parameter $\theta$ by minimizing the risk function:
+
+\begin{equation}
+    f^* \in \argmin_{f} \mathcal{R}_{\mathbb{P}}(f)
+    \label{eqn:4.1}
+\end{equation}
+
+where,
+\begin{equation}
+    \mathcal{R}_{\mathbb{P}}(f) = \mathbb{E}_{\mathbb{P}}[\ell(y, f(x; \theta))]
+    \label{eqn:4.2}
+\end{equation}
+
+\section{Introducing Covariate Shift to the Model}
+In standard supervised learning theories, the test sample is assumed to follow $\mathbb{P}(Y \mid X)\mathbb{P}_{\text{train}}(X)$, which is the same probability distribution as for the training samples $\mathcal{S} = \{(X, Y)\} = \{(x_i, y_i)\}_{i=1}^n$ \citep{sugiyama2000covariate}. However, in what follows, we consider the situation under \emph{covariate shift} what we discussed before in section \ref{chp:2}, i.e., when
+\begin{enumerate}
+    \item the conditional distribution $\mathbb{P}(Y \mid X)$ remains unchanged across train and test sample (conditional distribution stability), but
+    \item the test input points follows a probability distribution $\mathbb{P}_{\text{test}}$ different than $\mathbb{P}_{\text{train}}$ (input distribution change).
+\end{enumerate}
+
+In other words, it follows:
+\begin{equation}
+    \mathbb{P}_{\text{train}}(Y \mid X) = \mathbb{P}_{\text{test}}(Y \mid X)
+    \label{eqn:4.3}
+\end{equation}
+
+but
+\begin{equation}
+    \mathbb{P}_{\text{train}} (X) \neq \mathbb{P}_{\text{test}} (X)
+    \label{eqn:4.4}
+\end{equation}
+
+Now, let $p_{\text{train}}(X)$ and $p_{\text{test}}(X)$ be the probability density functions corresponding to the input distribution $\mathbb{P}_{\text{train}}(X)$ and $\mathbb{P}_{\text{test}}(X)$, respectively. $\mathbb{P}_{\text{train}}(X)$ and $\mathbb{P}_{\text{test}}(X)$ are also called \emph{source distribution} and \emph{target distribution} respectively. For theoretical purposes, we can assume that the ratio of test and training input densities at training input points
+
+\begin{equation}
+    \omega(x_i) = \frac{p_{\text{test}}(x_i)}{p_{\text{train}}(x_i)} = \frac{d\mathbb{P}_{\text{test}}(x_i)}{d\mathbb{P}_{\text{train}}(x_i)}
+    \label{eqn:4.5}
+\end{equation}
+
+is finite and known, where $\omega: \mathcal{X} \to \mathbb{R}_+$ is the \emph{Radon-Nikodym derivative} of the target measure with respect to the source measure. We refer the above concept as \textcolor{blue}{\emph{importance sampling}} \citep{fishman1996monte} and the individual weight ratios are called \textcolor{blue}{\emph{importance weight}}.\\
+
+Importance weights $\omega(x_i)$ can also be expressed as a factor to reweight the test sample points:
+
+\begin{equation}
+    d\mathbb{P}_{\text{test}}(x_i) = w(x_i)d\mathbb{P}_{\text{train}}(x_i)
+    \label{eq:4.6}
+\end{equation}
+
+Further, we can assume \citep{ma2022optimally} that either of
+\begin{enumerate}
+    \item $\sup_x \lvert w(x) \rvert \leq B$ i.e., uniformyl bounded or
+    \item $\mathbb{E}_{\mathbb{P}_{\text{train}}}[w(x)^2] \leq \tau^2, \tau^2 \geq 1$
+\end{enumerate}
+holds as the bound of $\omega(x)$ with condition (1) being the stricter one.\\
+
+In practical situations, the importance weights are usually unknown, since we do not know the underlying distributions. So we replace them with the empirical estimates, which we have explained in section \ref{imp-weight}.
+
+\begin{example}[Regression] For each fixed $X = x \in \mathcal{X}$, the \emph{optimal} estimator for a mean-squared loss function is given by the regression function $f^*(x) := \mathbb{E}[y \mid X=x]$, that is,
+
+\begin{equation}
+    f^* \in \argmin_{f \in L^2(\mathcal{X}, \mathbb{P}_{X})} \mathcal{R}_{\mathbb{P}}(f)
+    \label{eqn:4.7}
+\end{equation}
+
+where,
+\begin{equation}
+    \mathcal{R}_{\mathbb{P}}(f) = \mathbb{E}_{\mathbb{P}}[(Y - f(X))^2]
+    \label{eqn:4.8}
+\end{equation}
+
+It can be noted that for all $f \in L^2(\mathcal{X}, \mathbb{P}_{X})$, the excess risk is given by
+
+\begin{equation}
+    \mathcal{R}_{\mathbb{P}}(f) - \mathcal{R}_{\mathbb{P}}(f^*) = \lVert f - f^* \rVert_{L^2(\mathbb{P}_{X})}^2
+    \label{eqn:4.9}
+\end{equation}
+
+To find an estimator $\hat{f}_\mathcal{S}$ for $f^*$, we can make use of the i.i.d training samples $\mathcal{S} = \{(x_1, y_1), \ldots, (x_n, y_n) \} \in (\mathcal{X} \times \mathcal{Y})^n$ i.e., $\mathcal{S} \sim \mathbb{P}^n$.\\
+
+In case of covariate shift, the \emph{target distribution} $\mathbb{P}_{\text{test}}$ is different from the source distribution $\mathbb{P}_{\text{train}}$, which means the training and test samples follow different distributions. So, our goal is to find an estimator $\hat{f}_\mathcal{S}$ trained on $\mathcal{S} \sim \mathbb{P}_{\text{train}}^n$ whose excess risk with respect to $\mathbb{P}_{\text{test}}$ is small, i.e.,
+
+\begin{equation}
+    \mathcal{R}_{\mathbb{P}_{\text{test}}}(\hat{f}_{\mathcal{S}}) - \mathcal{R}_{\mathbb{P}_{\text{test}}}(f^*) = \lVert \hat{f}_{\mathcal{S}} - f^* \rVert_{L^2(\mathbb{P}_{\text{test}})}^2
+    \label{eqn:4.10}
+\end{equation}
+
+
+is small.\\
+\end{example}
+
+\begin{example}[Mean Shift]
+Let us consider a special case of covariate shift - "\emph{mean shift}" in the context of the family of multivariate normal distributions:
+
+\begin{equation}
+    \mathbb{P}_{\text{train}} = \mathcal{N}(0, \Sigma), \quad \mathbb{P}_{\text{test}} = \mathcal{N}(\mu, \Sigma),
+    \label{eqn:4.11}
+\end{equation}
+
+where $\mu \in \mathbb{R}^d$ is the mean and positive definite $\Sigma: \mathbb{R}^d \to \mathbb{R}^d$ is the covariance matrix. As we recall, the probability density function (PDF) of a multivariate normal (Gaussian) distribution with mean vector $\mu$ and covariance matrix $\Sigma$ for a $d$-dimensional random variable $X$ is given by:
+
+\begin{equation}
+    f_{\mu, \Sigma}(X) = \frac{1}{(2\pi)^{d/2} \lvert \Sigma \rvert ^{1/2}} \exp \left( -\frac{1}{2}(X - \mu)^\top \Sigma^{-1} (X - \mu)\right)
+    \label{eqn:4.12}
+\end{equation}
+$$$$
+
+Hence, the weights can be calculated directly as:
+
+\begin{equation}
+    \omega(X) = e^{\frac{1}{2}(\mu^\top\Sigma^{-1}\mu + 2x^\top\Sigma^{-1}\mu)}
+    \label{eqn:4.13}
+\end{equation}
+
+However, they are not bounded.
+\end{example}
+
+\section{Empirical Risk Minimization and its Importance Weighted Variants}
+
+\subsection{Empirical Risk Minimization}
+
+Once again, we recall the goal of supervised learning: Given some observations $(x_i, y_i) \in \mathcal{X} \times \mathcal{Y}, (i=1, 2, \dots,n)$ of inputs and outputs (or features/variables) that we call \textit{training data} and given a new $\tilde{x} \in \mathcal{X}=\mathbb{R}^d$, predict $\tilde{y} \in \mathcal{Y} = \mathbb{R}$ (\textit{test data}) with a regression function $f: \mathcal{X} \rightarrow \mathcal{Y}$ such that $f(\tilde{x}) \approx \tilde{y}$.\\
+
+Considering a mean-square loss function, $\ell(y_i, \hat{y}_i) = \frac{1}{n} \sum_{i=1}^{n} (y_i - f_{\theta}(x_i))^2$, where $y_i$ is the true output and $\hat{y}_i$ is the predicted output, the empirical risk for the regression case is defined by:
+
+\begin{equation}
+  \hat{\mathcal{R}}(\theta):= \frac{1}{n}\sum_{i=1}^{n}(y_i - f_{\theta}(x_i))^2, \theta \in \Theta
+  \label{eqn:4.14}
+\end{equation}
+
+which we compute on the given observations  $(x_i, y_i), i=1, 2, \dots,n$. To obtain a "\textit{good}" or "\textit{reasonable}" estimator, we minimize the empirical risk, which is known as \textcolor{blue}{\emph{empirical risk minimization}}(ERM), which is a standard method to learn the parameter $\theta$ in any supervised learning algorithm \citep{vapnik1998statistical, scholkopf2002learning}. That means, we try to learn the parameter $\theta$, for which the above risk (in \ref{eqn:4.14}) is minimum:
+
+\begin{equation}
+    \hat{\theta}_{\text{ERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n}\ell(y_i, \hat{f}(x_i; \theta)) \right]
+    \label{eqn:4.15}
+\end{equation}
+
+where $\ell: \mathbb{R} \times \mathbb{R} \to \mathbb{R}$ is a loss function.\\
+
+In traditional cases of supervised learning, when $\mathbb{P}_{\text{train}}(X) = \mathbb{P}_{\text{test}}(X)$ i.e. the train and test distributions are the same, ERM provides a consistent estimator \citep{shimodaira2000improving}. However, under the conditions of covariate shift (as explained earlier in section \ref{chp:2}), where $\mathbb{P}_{\text{train}}(X) \neq \mathbb{P}_{\text{test}}(X)$, ERM is not generally consistent anymore \citep{shimodaira2000improving}:
+
+\begin{equation}
+    \lim_{n \to \infty} (\hat{\theta}_{\text{ERM}}) \neq \theta^*
+    \label{eqn:4.16}
+\end{equation}
+
+where $\theta^*$ is the \emph{true optimal model parameter} that minimizes the expected loss under the test distribution:
+
+\begin{equation}
+    \theta^* = \argmin_{\theta \in \Theta} \left( \mathbb{E}_{(\tilde{x}, \tilde{y}) \sim \mathcal{T}} \left[ \ell (\tilde{y}, \hat{f}(\tilde{x}, \theta)) \right] \right)
+    \label{eqn:4.17}
+\end{equation}
+
+
+\subsection{Importance Weighted Variant of ERM}\label{IWERM}
+Under the conditions of covariate shift, we use the following \textcolor{blue}{\emph{importance weighted empirical risk minimization}} (IWERM), which gives us more consistent results \citep{shimodaira2000improving}:
+
+\begin{equation}
+    \hat{\theta}_{\text{IWERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n} \frac{p_{\text{test}}(x_i)}{p_{\text{train}}(x_i)} \ell(y_i, \hat{f}(x_i; \theta)) \right]
+    \label{eqn:4.18}
+\end{equation}
+
+We can use a simpler representation using the notation of $\omega(x_i)$ as:
+
+\begin{equation}
+    \hat{\theta}_{\text{IWERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n} w(x_i) \ell(y_i, \hat{f}(x_i; \theta)) \right]
+    \label{eqn:4.19}
+\end{equation}
+
+This satisfies even for a misspecified model:
+
+\begin{equation}
+    \lim_{n \to \infty} (\hat{\theta}_{\text{IWERM}}) = \theta^*
+    \label{eqn:4.20}
+\end{equation}
+
+Even with the increased consistency, IWERM is not always efficient and can be rather unstable in certain cases \citep{shimodaira2000improving}. Therefore, in practical cases with \emph{finite} samples, IWERM turns out to be not optimal, and we can use a slightly stabilized variant of IWERM \citep{sugiyama2000covariate}.\\
+
+\subsection{Other Variants of Importance Weighted ERM}
+We aim to control the trade-off between consistency and stability either by (a) weakening the weights (in the case of \textcolor{blue}{\emph{adaptive importance weighted empirical risk minimization}} (AIWERM)) as:
+
+\begin{equation}
+    \hat{\theta}_{\text{AIWERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n} \left( \frac{p_{\text{test}}(x_i)}{p_{\text{train}}(x_i)} \right)^{\lambda} \ell(y_i, \hat{f}(x_i; \theta)) \right]
+    \label{eqn:4.21}
+\end{equation}
+
+which, in simpler terms using the notation $\omega(x_i)$, is:
+
+\begin{equation}
+    \hat{\theta}_{\text{AIWERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n} w(x_i)^{\lambda} \ell(y_i, \hat{f}(x_i; \theta)) \right]
+    \label{eqn:4.22}
+\end{equation}
+
+or (b) adding a regularization term to the empirical risk (in the case of \textcolor{blue}{\emph{regularized importance weighted empirical risk minimization}} (RIWERM)) as:
+
+\begin{equation}
+    \hat{\theta}_{\text{IWERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n} \frac{p_{\text{test}}(x_i)}{p_{\text{train}}(x_i)} \ell(y_i, \hat{f}(x_i; \theta)) + \gamma \Omega(\theta) \right]
+    \label{eqn:4.23}
+\end{equation}
+
+which, in simpler terms using the notation $\omega(x_i)$, is:
+
+\begin{equation}
+    \hat{\theta}_{\text{IWERM}} = \argmin_{\theta \in \Theta} \left[ \frac{1}{n}\sum_{i=1}^{n} w(x_i) \ell(y_i, \hat{f}(x_i; \theta)) + \gamma \Omega(\theta) \right]
+    \label{eqn:4.24}
+\end{equation}
+
+where $0 \leq \lambda \leq 1, \gamma \geq 0,$ and $\Omega(\theta)$ are some regularization functions.\\
+
+In addition to above AIWERM and RIWERM methods, there can be many other possibilities of controlling the trade-off between consistency and stability to learn the parameter $\theta$, which are based on the same methodology.
+For example, an importance weighted variant of support vector machines \citep{vapnik1998statistical, scholkopf2002learning, huang2007correcting} or graph regularization techniques \citep{bousquet2004measure, belkin2004semi, hein2006uniform} can also be employed.
