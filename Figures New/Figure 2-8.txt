@@ -1,0 +1,5 @@
+Figure 2 to 8:
+
+a --> step size = 0.1
+b --> step size = 0.05
+c --> step size = 0.005
