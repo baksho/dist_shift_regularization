@@ -38,7 +38,7 @@ def generate_data(n_samples, n_features, mu, theta_star, noise_std=1):
 
     return X, Y
 
-# # TEMPORARY
+# # TEMPORARY -- FOR VISUALIZATION PURPOSES
 
 # X_train, Y_train = generate_data(n_samples, n_features, 0, theta_star)
 # X_train = X_train + np.random.normal(0, 0.1, X_train.shape)
