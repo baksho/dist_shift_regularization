@@ -1,4 +1,4 @@
-The topic of the project is **Covariate Shift Regularization with Kernels**.
+The topic of the project is **Covariate Shift Regularization with Kernel Methods**.
 
 ## Description
 Covariate shift, a fundamental challenge in supervised learning, occurs when the distribution of input features differs between training and test datasets while the conditional distribution of the target given the input remains unchanged. This project explores the challenge of covariate shift through the lens of kernel methods, particularly in the linear regression settings. We analyze theoretical foundations, propose strategies for mitigating covariate shift using importance weighting with weights estimated by kernel density estimation and self-attention mechanisms. We conduct experiments using synthetic data to assess the effect of mean shift on model performance, comparing ordinary least squares and gradient descent estimators. We also explore the roles of different parameters like sample size, learning rate, masking fucntion etc. in mitigating the challenge posed by covariate shift.
